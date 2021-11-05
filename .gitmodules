@@ -1,0 +1,6 @@
+[submodule "src/droneui/src/imcore/implot"]
+	path = src/droneui/src/imcore/implot
+	url = https://github.com/epezent/implot.git
+[submodule "src/droneui/src/imcore/imgui"]
+	path = src/droneui/src/imcore/imgui
+	url = https://github.com/ocornut/imgui.git
