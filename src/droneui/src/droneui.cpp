@@ -62,10 +62,12 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
   tohover_ =  false;
   stocktake_ = false;
   found_qr_ = false;
+  threadsrunning_ = true;
+  firstdetection_ =  true;
+  isflying_ = false;
   currentwaypoint_ = 0;
-  stockfound_.resize(1);
+  stockfound_.clear();
   last_data_ = "Not found any stock yet";
-  stockfound_[0] =  last_data_;
 
   //initialise cmd values
   hovercmd_.vx = 0;
@@ -76,23 +78,36 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
 
  waypointlist_[0].request.duration = ros::Duration(5.0);
  waypointlist_[0].request.relative = false;
- waypointlist_[0].request.goal.x=0.09;
- waypointlist_[0].request.goal.y=0.07;
- waypointlist_[0].request.goal.z= 1.5;
+ waypointlist_[0].request.goal.x=1.2;
+ waypointlist_[0].request.goal.y=1.6;
+ waypointlist_[0].request.goal.z= 0.6;
  waypointlist_[0].request.yaw = 0;
+
+ takeoff_.request.height = 0.5;
+ takeoff_.request.duration = ros::Duration(3);
+
+//  emergency.data = true;
 
 
 
   //set thread
   hover_thread_ = std::thread([this]() {
+    while(threadsrunning_){
     if(tohover_){
+      if(!isflying_){
+        hovercmd_.zDistance = takeoff_.request.height;
+      }
+      else{
       hovercmd_.zDistance = currentpose_.pose.position.z;
       drone_hover_.publish(hovercmd_);
+      }
+    }
     }
     
 });
 
   waypoint_thread_ = std::thread([this]() {
+    while(threadsrunning_){
     if(stocktake_){
     waypointcmd_ = waypointlist_[currentwaypoint_];
     tohover_ =  false;
@@ -103,7 +118,7 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
     tohover_ =  true;
 
     }
-    
+    }
 });
 
 
@@ -111,7 +126,10 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
  image_sub_ = nh_.subscribe<sensor_msgs::Image>("/espdrone/image_rect_color", 10, &DroneGui::QRCallback, this);
  pose_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("/espdrone/pose", 10, &DroneGui::PoseCallback, this);
  drone_hover_ = nh_.advertise<espdrone_msgs::Hover>("/espdrone/cmd_hover", 1000);
- waypointclient_ = nh_.serviceClient<espdrone_msgs::GoTo>("/espdrone178/go_to");
+ waypointclient_ = nh_.serviceClient<espdrone_msgs::GoTo>("/espdrone/go_to");
+ estopclient_ = nh_.serviceClient<espdrone_msgs::Stop>("/espdrone/stop");
+ takeoffclient_ = nh_.serviceClient<espdrone_msgs::Takeoff>("/espdrone/takeoff");
+//  emergencyclient_ = nh_.serviceClient<std_srvs::SetBool>("/espdrone/emergency");
 
 
  // initialise gluint textures
@@ -165,13 +183,35 @@ void DroneGui::Draw() {
     ImGui::Columns(2, "UI");
     ImGui::Image( reinterpret_cast<void*>( static_cast<intptr_t>( texture ) ), ImVec2( image_.cols, image_.rows ) );
     ImGui::NextColumn();
+    if (ImGui::Button("Take off")) {
+      if(!isflying_){
+      // takeoffclient_.call(takeoff_);
+      // tohover_ = true;
+      // std::thread takeoff = std::thread([this]() {
+      //   std::this_thread::sleep_for (std::chrono::seconds(3));
+      //   isflying_ = true;
+
+    
+      // });
+      // takeoff.detach();
+
+      // isflyingclient_.call(takeofftrigger_);
+      // isflying_ = true;
+
+      }
+    }
+    ImGui::SameLine();
     if (ImGui::Button("Start stocktake")) {
       stocktake_ = true;
     }
     ImGui::SameLine();
      if (ImGui::Button("Emergency Stop")) {
-      tohover_ = false;
-      stocktake_ = false;
+      // tohover_ = false;
+      // stocktake_ = false;
+      // estopclient_.call(estop_);
+      // isflying_ = false;
+
+      // emergencyclient_.call(std_srvs::SetBool);
     }
     ImGui::Text("Pose\nX:%f\nY:%f\nZ:%f", currentpose_.pose.position.x,currentpose_.pose.position.y,currentpose_.pose.position.z);
     if(checkforqr_){
@@ -187,10 +227,31 @@ void DroneGui::Draw() {
 
     }
     ImGui::Text(" \nStock Found:");
+    if(stockfound_.size()>0)
     for(int i =0; i<stockfound_.size(); i++){
-      ImGui::Text("%s", stockfound_[i].c_str());
+      if(stockfound_[i].compare("Mango")==0)
+      ImGui::Text("B02: %s", stockfound_[i].c_str());
+
+      else if(stockfound_[i].compare("Banana")==0)
+      ImGui::Text("C01: %s", stockfound_[i].c_str());
+
+      
+      else if(stockfound_[i].compare("Orange")==0)
+      ImGui::Text("F02: Orange");
+
+
+      else if(stockfound_[i].compare("Durian")==0)
+      ImGui::Text("G02: Durian");
+
+
+      else if(stockfound_[i].compare("Apple")==0)
+      ImGui::Text("G01: Apple");
       
 
+
+    }
+    else {
+        ImGui::Text("No Stock Detected Yet");
 
     }
     
@@ -360,6 +421,9 @@ void DroneGui::Draw() {
 
 DroneGui::~DroneGui() {
   // Cleanup
+  threadsrunning_ = false;
+  hover_thread_.join();
+  waypoint_thread_.join();
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImPlot::DestroyContext();
@@ -382,24 +446,34 @@ void DroneGui::QRCallback(const sensor_msgs::Image::ConstPtr& msg){
     image_ = cv_ptr_->image;
 
     if(checkforqr_){
-  
-     
-     std::string data = qrDecoder_.detectAndDecode(image_, bbox_, rectifiedImage_);
-
-     if(data.length()>0){
     
-    if(!last_data_.compare(data)){
+    //std::cout<<"checking for qr"<<std::endl;
+    
+     
+     std::string qrdata = qrDecoder_.detectAndDecode(image_, bbox_, rectifiedImage_);
+    // std::cout<<qrdata.length()<<std::endl;
+
+     if(qrdata.length()>0){
+
+     //  std::cout<<"data detected"<<std::endl;
+       
+    
+    if(last_data_.compare(qrdata)!=0){
+    //std::cout<<"data is new"<<std::endl;
     found_qr_ = true;
-    last_data_ = data;
-    if(stockfound_.size() == 1){
+    last_data_ = qrdata;
+    if(stockfound_.size() == 0){
+      //std::cout<<"updating first entry"<<std::endl;
+      stockfound_.resize(1);
       stockfound_[0] = last_data_;
     }
     else{
+      //std::cout<<"adding new entry"<<std::endl;
     stockfound_.push_back(last_data_);}
 
-    std::cout << "Decoded Data : " << data << std::endl;
+    //std::cout << "Decoded Data : " << qrdata << std::endl;
 
-    //  Display(image, bbox);
+    //  QRDisplay(image_, bbox_);
     //  rectifiedImage_.convertTo(rectifiedImage_, CV_8UC3);
     //  cv::imshow("Rectified QRCode", rectifiedImage_);
     //  cv::waitKey(0);
@@ -410,7 +484,7 @@ void DroneGui::QRCallback(const sensor_msgs::Image::ConstPtr& msg){
      else {
        if(found_qr_){
          found_qr_ = false;
-         std::cout<<"No QR code detected"<<std::endl;
+         //std::cout<<"No QR code detected"<<std::endl;
        }
      }
     }
@@ -422,5 +496,14 @@ void DroneGui::QRCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 void DroneGui::PoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose){
 currentpose_.pose = pose->pose;
+}
+
+void DroneGui::QRDisplay(cv::Mat &im, cv::Mat &bbox){
+   int n = bbox.rows;
+  for(int i = 0 ; i < n ; i++)
+  {
+    line(im, cv::Point2i(bbox.at<float>(i,0),bbox.at<float>(i,1)), cv::Point2i(bbox.at<float>((i+1) % n,0), bbox.at<float>((i+1) % n,1)), cv::Scalar(255,0,0), 3);
+  }
+  imshow("Result", im);
 
 }

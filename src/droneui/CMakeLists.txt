@@ -7,8 +7,8 @@ target_include_directories(droneui PUBLIC
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 target_link_libraries(droneui PUBLIC
-	${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(droneui PUBLIC imcore ${catkin_LIBRARIES} ${OpenCV_LIBS})
+	${CMAKE_THREAD_LIBS_INIT} imcore ${OpenCV_LIBS} ${catkin_LIBRARIES})
+
 
 
 
