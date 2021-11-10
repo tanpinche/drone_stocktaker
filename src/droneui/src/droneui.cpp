@@ -8,10 +8,6 @@ static void glfw_error_callback(int error, const char* description) {
 
 
 DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
-  // selectedjs_ = 0;
-  // selectedcan_ = 0;
-  // selectedrobot_ = 0;
-
   // Setup window
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit()) return;
@@ -65,6 +61,8 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
   threadsrunning_ = true;
   firstdetection_ =  true;
   isflying_ = false;
+  servicecallsuccess_ = false;
+  setemergency_.request.data = true;
   currentwaypoint_ = 0;
   stockfound_.clear();
   last_data_ = "Not found any stock yet";
@@ -76,12 +74,56 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
   hovercmd_.zDistance = 1;
 
 
- waypointlist_[0].request.duration = ros::Duration(5.0);
- waypointlist_[0].request.relative = false;
- waypointlist_[0].request.goal.x=1.2;
- waypointlist_[0].request.goal.y=1.6;
- waypointlist_[0].request.goal.z= 0.6;
- waypointlist_[0].request.yaw = 0;
+
+// 
+espdrone_msgs::GoTo waypoints[5];
+waypoints[0].request.duration = ros::Duration(3.0);
+waypoints[0].request.relative = false;
+waypoints[0].request.goal.x=-0.522;
+waypoints[0].request.goal.y=0.716;
+waypoints[0].request.goal.z= 0.089;
+waypoints[0].request.yaw = -11.591; 
+
+waypoints[1].request.duration = ros::Duration(3.0);
+waypoints[1].request.relative = false;
+waypoints[1].request.goal.x=0.24;
+waypoints[1].request.goal.y=1.265;
+waypoints[1].request.goal.z= -0.064;
+waypoints[1].request.yaw = -53.523;
+
+waypoints[2].request.duration = ros::Duration(3.0);
+waypoints[2].request.relative = false;
+waypoints[2].request.goal.x=0.895;
+waypoints[2].request.goal.y=1.428;
+waypoints[2].request.goal.z= 0.121;
+waypoints[2].request.yaw = -50.237;
+
+
+
+waypoints[3].request.duration = ros::Duration(3.0);
+waypoints[3].request.relative = false;
+waypoints[3].request.goal.x=1.248;
+waypoints[3].request.goal.y=1.621;
+waypoints[3].request.goal.z= 0.321;
+waypoints[3].request.yaw = -64.17;
+
+waypoints[4].request.duration = ros::Duration(3.0);
+waypoints[4].request.relative = false;
+waypoints[4].request.goal.x=-1.646;
+waypoints[4].request.goal.y=1.451;
+waypoints[4].request.goal.z= 0.292;
+waypoints[4].request.yaw = 246.505;
+
+
+
+
+
+waypointlist_.clear();
+for(int x = 0; x<5; x++){
+  waypointlist_.push_back(waypoints[x]);
+
+
+}
 
  takeoff_.request.height = 0.5;
  takeoff_.request.duration = ros::Duration(3);
@@ -104,7 +146,7 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
     }
     }
     
-});
+  });
 
   waypoint_thread_ = std::thread([this]() {
     while(threadsrunning_){
@@ -113,13 +155,26 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
     tohover_ =  false;
     if(waypointclient_.call(waypointcmd_)){
       ROS_INFO("moving to point %d\n",currentwaypoint_);
-      waypointcmd_.request.duration.sleep();
+      std::this_thread::sleep_for(std::chrono::seconds(3));
+      servicecallsuccess_ = true;
     }
-    tohover_ =  true;
+    else {
+      servicecallsuccess_ = false;
+    }
+    if(waypointlist_.size()>currentwaypoint_ +1 ){
+      std::cout<<"incrementing waypoint index";
+      currentwaypoint_ ++;
+    }
+    else{
+      std::cout<<"end stocktake"<<"/n";
+      stocktake_ = false;
+    }
 
+    tohover_ =  true;
+    
     }
     }
-});
+  }); 
 
 
  // initialise ros subsriber and publisher
@@ -129,7 +184,8 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
  waypointclient_ = nh_.serviceClient<espdrone_msgs::GoTo>("/espdrone/go_to");
  estopclient_ = nh_.serviceClient<espdrone_msgs::Stop>("/espdrone/stop");
  takeoffclient_ = nh_.serviceClient<espdrone_msgs::Takeoff>("/espdrone/takeoff");
-//  emergencyclient_ = nh_.serviceClient<std_srvs::SetBool>("/espdrone/emergency");
+ emergencyclient_ = nh_.serviceClient<std_srvs::SetBool>("/espdrone/emergency");
+ isflyingclient_ = nh_.serviceClient<std_srvs::SetBool>("/espdrone/is_flying");
 
 
  // initialise gluint textures
@@ -162,42 +218,15 @@ void DroneGui::Draw() {
     glfwGetWindowSize(window_, &window_width_, &window_height_);
     ImGui::SetWindowSize(ImVec2(window_width_, window_height_));
     ImGui::SetWindowPos(ImVec2(0, 0));
-
-    // // resize window to fit all widgets after connecting to a joystick
-    // if (resize_after_connect_) {
-    //   glfwSetWindowSize(window_, current_width_ + 150, current_height_ + 150);
-    //   resize_after_connect_ = false;
-    // }
-    // // button to manually resize window to fit all existing widgets
-    // if (ImGui::Button("Fit Window")) {
-    //   glfwSetWindowSize(window_, current_width_ + 150, current_height_ + 150);
-    // }
-    // // interface for connecting to joystick
-    // ImGui::Text("Joystick Settings");
-    // ImGui::Text("Connect to:");
-    // ImGui::SameLine();
-    // ImGui::PushItemWidth(50);
-    // // ImGui::Combo("", &selectedjs_, js, joyctl.list_of_joystick_.size());
-    // ImGui::SameLine();
+    //ImGui::SetWindowFontScale(1.2);
     
     ImGui::Columns(2, "UI");
     ImGui::Image( reinterpret_cast<void*>( static_cast<intptr_t>( texture ) ), ImVec2( image_.cols, image_.rows ) );
     ImGui::NextColumn();
     if (ImGui::Button("Take off")) {
       if(!isflying_){
-      // takeoffclient_.call(takeoff_);
-      // tohover_ = true;
-      // std::thread takeoff = std::thread([this]() {
-      //   std::this_thread::sleep_for (std::chrono::seconds(3));
-      //   isflying_ = true;
-
-    
-      // });
-      // takeoff.detach();
-
-      // isflyingclient_.call(takeofftrigger_);
-      // isflying_ = true;
-
+        isflyingclient_.call(setflying_);
+        isflying_ = true;
       }
     }
     ImGui::SameLine();
@@ -206,15 +235,27 @@ void DroneGui::Draw() {
     }
     ImGui::SameLine();
      if (ImGui::Button("Emergency Stop")) {
-      // tohover_ = false;
-      // stocktake_ = false;
-      // estopclient_.call(estop_);
-      // isflying_ = false;
-
-      // emergencyclient_.call(std_srvs::SetBool);
+       emergencyclient_.call(setemergency_);
+      threadsrunning_ = false;
+      tohover_ = false;
+      stocktake_ = false;
+      isflying_ = false;
     }
-    ImGui::Text("Pose\nX:%f\nY:%f\nZ:%f", currentpose_.pose.position.x,currentpose_.pose.position.y,currentpose_.pose.position.z);
-    if(checkforqr_){
+    
+    ImGui::Text("Number of Waypoints in route: %d", waypointlist_.size());
+
+    ImGui::Text("\n\nPose\nX:%f\nY:%f\nZ:%f", currentpose_.pose.position.x,currentpose_.pose.position.y,currentpose_.pose.position.z);
+    ImGui::SetWindowFontScale(1.2f); 
+    ImGui::Text("\nDrone Status\n");
+    ImGui::SetWindowFontScale(1);
+
+
+    if(isflying_){
+    ImGui::Text("Flight Status: Flying");}
+
+    else 
+    ImGui::Text("Flight Status: NOT Flying");
+    if(stocktake_){
     ImGui::Text("Status: checking for qrcode");
     }
     if(found_qr_){
@@ -254,152 +295,6 @@ void DroneGui::Draw() {
         ImGui::Text("No Stock Detected Yet");
 
     }
-    
-
-    // // display joystick info
-    // auto joystick_name = joyctl.GetCurrentDeviceName();
-    // ImGui::SameLine();
-    // ImGui::Text("Connected to");
-    // ImGui::Text(device_name_.c_str());
-    // ImGui::Text("Has %d Axes", joyctl.GetNumberOfAxis());
-    // ImGui::SameLine();
-    // ImGui::Text("and %d buttons", joyctl.GetNumberOfButton());
-    // ImGui::Text("Thread Status:");
-    // ImGui::SameLine();
-    // // display ReadThread status
-    // if (joyctl.IsThreadActive())
-    //   ImGui::TextColored(ImVec4(0, 1, 0, 1), "ACTIVE");
-    // else
-    //   ImGui::TextColored(ImVec4(1, 0, 0, 1), "INACTIVE");
-    // if (ImGui::Button("Start Reading Thread")) joyctl.StartReadThread();
-    // ImGui::SameLine();
-    // if (ImGui::Button("Stop Reading Thread")) joyctl.StopRead();
-
-    // // interface for connecting to CAN
-    // const char* can_port[can_port_.size()];
-    // for (int x = 0; x < can_port_.size(); x++) {
-    //   can_port[x] = can_port_[x].c_str();
-    // }
-    // ImGui::Text("CAN Settings");
-    // ImGui::PushItemWidth(65);
-    // ImGui::Combo(" ", &selectedcan_, can_port, IM_ARRAYSIZE(can_port));
-    // ImGui::SameLine();
-    // if (ImGui::Button("Connect to CAN")) {
-    //   device_name_ = can_port_[selectedcan_];
-    // }
-    // ImGui::SameLine();
-    // char user_input[20]="";
-    // ImGui::InputText("", user_input, IM_ARRAYSIZE(user_input));
-    // ImGui::SameLine();
-    // if (ImGui::Button("add port")) {
-    //   can_port_.push_back(user_input);
-      
-    // }
-    
-    // ImGui::Text("Connected to");
-    // ImGui::SameLine();
-    // ImGui::Text(device_name_.c_str());
-    // ImGui::Text(" ");
-
-    // // Interface for selecting robot type
-    // ImGui::Text("Robot Settings");
-    // ImGui::Combo("  ", &selectedrobot_, robot_type_, IM_ARRAYSIZE(robot_type_));
-
-    // ImGui::SameLine();
-    // if (ImGui::Button("Select Robot")) {
-    //   switch (selectedrobot_) {
-    //     case 0:
-    //       linked_robot_ = selectedrobot_;
-    //       scout.Connect(device_name_);
-    //       break;
-
-    //     case 1:
-    //       linked_robot_ = selectedrobot_;
-    //       // TracerBase tracer;
-    //       tracer.Connect(device_name_);
-    //       break;
-    //   }
-    // }
-    // ImGui::Text("Connected to");
-    // ImGui::SameLine();
-    // ImGui::Text(robot_type_[linked_robot_]);
-    // ImGui::Text(" ");
-
-    // // PublishThread status and control
-    // ImGui::Text("Robot Type");
-    // ImGui::Text("Sending Inputs:");
-    // ImGui::SameLine();
-    // if (send_inputs)
-    //   ImGui::TextColored(ImVec4(0, 1, 0, 1), "ACTIVE");
-    // else
-    //   ImGui::TextColored(ImVec4(1, 0, 0, 1), "INACTIVE");
-    // if (ImGui::Button("Start Sending Joystick Data")) send_inputs = true;
-    // ImGui::SameLine();
-    // if (ImGui::Button("Stop Sending Joystick Data")) send_inputs = false;
-
-    // // diplaying values of joystick axes and buttons
-    // ImGui::Columns(2, "Values");
-    // ImGui::SetColumnWidth(0, 420);
-    // for (int i = 0; i < joyctl.GetNumberOfAxis(); i++) {
-    //   ImGui::Text("Axis %d", i);
-    //   cursor_pos_ = ImGui::GetCursorScreenPos();
-
-    //   // creating of the progress bar to display negative axis values
-    //   ImGui::GetWindowDrawList()->AddRectFilled(
-    //       cursor_pos_, ImVec2(cursor_pos_.x + 199, cursor_pos_.y + 19),
-    //       ImGui::GetColorU32(ImGuiCol_PlotHistogram));
-    //   ImGui::GetWindowDrawList()->AddRectFilled(
-    //       cursor_pos_,
-    //       ImVec2(cursor_pos_.x + 199 - joyctl.GetAxisValue(i) * -199,
-    //              cursor_pos_.y + 19),
-    //       ImGui::GetColorU32(ImGuiCol_FrameBg));
-
-    //   ImGui::SetCursorPos(
-    //       ImVec2(cursor_pos_.x + 176 - joyctl.GetAxisValue(i) * -199,
-    //              cursor_pos_.y + 3));
-    //   if (joyctl.GetAxisValue(i) < 0 && joyctl.GetAxisValue(i) > -0.85)
-    //     ImGui::Text("%.0f%%", -100 * joyctl.GetAxisValue(i));
-    //   else if (joyctl.GetAxisValue(i) < 0) {
-    //     ImGui::SetCursorPos(ImVec2(cursor_pos_.x + 2, cursor_pos_.y + 2));
-    //     ImGui::Text("%.0f%%", -100 * joyctl.GetAxisValue(i));
-    //   }
-
-    //   cursor_pos_.x += 200;
-    //   ImGui::SetCursorPos(cursor_pos_);
-    //   ImGui::ProgressBar(joyctl.GetAxisValue(i), ImVec2(199.0f, 0.0f));
-    // }
-    // ImGui::NextColumn();
-    // for (int i = 0; i < joyctl.GetNumberOfButton(); i++) {
-    //   if (joyctl.GetButtonValue(i) == 1) {
-    //     ImGui::Text("Button %d:", i);
-    //     ImGui::SameLine();
-    //     ImGui::TextColored(ImVec4(0, 1, 0, 1), "ON");
-    //   } else
-    //     ImGui::Text("Button %d: OFF", i);
-
-      // cursor_pos_ = ImGui::GetCursorPos();
-      // if (current_width_ < cursor_pos_.x) current_width_ = cursor_pos_.x;
-      // if (current_height_ < cursor_pos_.y) current_height_ = cursor_pos_.y;
-    
-
-    // AdditionalFunctions();
-    // // send commands to robot
-    // if (joyctl.IsThreadActive() && send_inputs) {
-    //   switch (linked_robot_) {
-    //     case 0:
-    //       scout.SetMotionCommand(CalculateLinearVeloctiy(),
-    //                              CalculateAngularVeloctiy());
-    //       break;
-
-    //     case 1:
-    //       tracer.SetMotionCommand(CalculateLinearVeloctiy(),
-    //                               CalculateAngularVeloctiy());
-    //       break;
-    //   }
-    // }
-
-    // ImGui::Columns();
-    
 
     //end with ros::spin
     ros::spinOnce();

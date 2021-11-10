@@ -17,6 +17,7 @@
 #include "espdrone_msgs/Hover.h"
 #include "espdrone_msgs/Stop.h"
 #include <std_srvs/Trigger.h>
+#include <std_srvs/SetBool.h>
 
 
 #include "implot/implot.h"
@@ -32,6 +33,8 @@
 #include <GLFW/glfw3.h>
 #include <atomic>
 #include <map>
+#include <chrono>
+
 
 /*using namespace rdu;
 struct ImDraw : public ImCanvas {
@@ -79,12 +82,15 @@ class DroneGui {
  //control variables
  std::thread hover_thread_, waypoint_thread_;
  std::atomic<bool> tohover_ , checkforqr_, stocktake_, threadsrunning_;
+  
+
 
  //data variables
  std::string last_data_;
  bool found_qr_, firstdetection_, isflying_;
  int currentwaypoint_;
  std::vector<std::string> stockfound_;
+ bool servicecallsuccess_;
 //  std::map<std::string, std::string>stocklist_;
 
  //ros variables
@@ -95,15 +101,17 @@ ros::Publisher drone_hover_;
 ros::ServiceClient waypointclient_;
 ros::ServiceClient estopclient_;
 ros::ServiceClient takeoffclient_;
-ros::ServiceClient emergencyclient_;;
+ros::ServiceClient emergencyclient_;
+ros::ServiceClient isflyingclient_;
 
 espdrone_msgs::Hover hovercmd_;
 espdrone_msgs::GoTo waypointcmd_;
-espdrone_msgs::GoTo waypointlist_[5];
+std::vector<espdrone_msgs::GoTo> waypointlist_;
 espdrone_msgs::Stop estop_;
 espdrone_msgs::Takeoff takeoff_;
 geometry_msgs::PoseStamped currentpose_;
-// std_srvs::SetBool emergency_;
+std_srvs::SetBool setemergency_;
+std_srvs::Trigger setflying_;
 
 
 
