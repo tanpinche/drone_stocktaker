@@ -76,50 +76,80 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
 
 
 // 
-espdrone_msgs::GoTo waypoints[5];
+espdrone_msgs::GoTo waypoints[10];
 waypoints[0].request.duration = ros::Duration(3.0);
 waypoints[0].request.relative = false;
-waypoints[0].request.goal.x=-0.522;
-waypoints[0].request.goal.y=0.716;
-waypoints[0].request.goal.z= 0.089;
-waypoints[0].request.yaw = -11.591; 
+waypoints[0].request.goal.x=-0.042;
+waypoints[0].request.goal.y=0.124;
+waypoints[0].request.goal.z= 0.57;
+waypoints[0].request.yaw = 6.883; 
 
 waypoints[1].request.duration = ros::Duration(3.0);
 waypoints[1].request.relative = false;
-waypoints[1].request.goal.x=0.24;
-waypoints[1].request.goal.y=1.265;
-waypoints[1].request.goal.z= -0.064;
-waypoints[1].request.yaw = -53.523;
+waypoints[1].request.goal.x=-0.16;
+waypoints[1].request.goal.y=-0.447;
+waypoints[1].request.goal.z= -0.631;
+waypoints[1].request.yaw = -2.28;
 
 waypoints[2].request.duration = ros::Duration(3.0);
 waypoints[2].request.relative = false;
-waypoints[2].request.goal.x=0.895;
-waypoints[2].request.goal.y=1.428;
-waypoints[2].request.goal.z= 0.121;
-waypoints[2].request.yaw = -50.237;
-
-
+waypoints[2].request.goal.x=0.019;
+waypoints[2].request.goal.y=-0.891;
+waypoints[2].request.goal.z= 0.657;
+waypoints[2].request.yaw = 1.783;
 
 waypoints[3].request.duration = ros::Duration(3.0);
 waypoints[3].request.relative = false;
-waypoints[3].request.goal.x=1.248;
-waypoints[3].request.goal.y=1.621;
-waypoints[3].request.goal.z= 0.321;
-waypoints[3].request.yaw = -64.17;
+waypoints[3].request.goal.x=0.124;
+waypoints[3].request.goal.y=-1.357;
+waypoints[3].request.goal.z= 0.627;
+waypoints[3].request.yaw = 40.526;
 
-waypoints[4].request.duration = ros::Duration(3.0);
+waypoints[4].request.duration = ros::Duration(1.0);
 waypoints[4].request.relative = false;
-waypoints[4].request.goal.x=-1.646;
-waypoints[4].request.goal.y=1.451;
-waypoints[4].request.goal.z= 0.292;
-waypoints[4].request.yaw = 246.505;
+waypoints[4].request.goal.x=0.54;
+waypoints[4].request.goal.y=-1.641;
+waypoints[4].request.goal.z= 0.624;
+waypoints[4].request.yaw = 75.865;
 
+waypoints[5].request.duration = ros::Duration(1.0);
+waypoints[5].request.relative = false;
+waypoints[5].request.goal.x=0.862;
+waypoints[5].request.goal.y=-1.759;
+waypoints[5].request.goal.z= 0.606;
+waypoints[5].request.yaw = 104.519;
 
+waypoints[6].request.duration = ros::Duration(1.0);
+waypoints[6].request.relative = false;
+waypoints[6].request.goal.x=1.441;
+waypoints[6].request.goal.y=-1.63;
+waypoints[6].request.goal.z= 0.58;
+waypoints[6].request.yaw = 95.809;
 
+waypoints[7].request.duration = ros::Duration(1.0);
+waypoints[7].request.relative = false;
+waypoints[7].request.goal.x=1.178;
+waypoints[7].request.goal.y=-1.63;
+waypoints[7].request.goal.z= 0.559;
+waypoints[7].request.yaw = 105.7;
+
+waypoints[8].request.duration = ros::Duration(3.0);
+waypoints[8].request.relative = false;
+waypoints[8].request.goal.x=1.63;
+waypoints[8].request.goal.y=-1.544;
+waypoints[8].request.goal.z= 0.419;
+waypoints[8].request.yaw = 95.6;
+
+waypoints[9].request.duration = ros::Duration(3.0);
+waypoints[9].request.relative = false;
+waypoints[9].request.goal.x=2.33;
+waypoints[9].request.goal.y=-1.437;
+waypoints[9].request.goal.z= 0.684;
+waypoints[9].request.yaw = 98.1;
 
 
 waypointlist_.clear();
-for(int x = 0; x<5; x++){
+for(int x = 0; x<10; x++){
   waypointlist_.push_back(waypoints[x]);
 
 
