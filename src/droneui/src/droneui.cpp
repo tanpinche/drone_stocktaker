@@ -182,10 +182,10 @@ for(int x = 0; x<10; x++){
     while(threadsrunning_){
     if(stocktake_){
     waypointcmd_ = waypointlist_[currentwaypoint_];
-    tohover_ =  false;
+    // tohover_ =  false;
     if(waypointclient_.call(waypointcmd_)){
       ROS_INFO("moving to point %d\n",currentwaypoint_);
-      std::this_thread::sleep_for(std::chrono::seconds(3));
+      std::this_thread::sleep_for(std::chrono::duration<double>(waypointcmd_.request.duration.toSec()));
       servicecallsuccess_ = true;
     }
     else {
@@ -200,7 +200,7 @@ for(int x = 0; x<10; x++){
       stocktake_ = false;
     }
 
-    tohover_ =  true;
+    // tohover_ =  true;
     
     }
     }
@@ -262,6 +262,7 @@ void DroneGui::Draw() {
     ImGui::SameLine();
     if (ImGui::Button("Start stocktake")) {
       stocktake_ = true;
+      tohover_ = true;
     }
     ImGui::SameLine();
      if (ImGui::Button("Emergency Stop")) {
