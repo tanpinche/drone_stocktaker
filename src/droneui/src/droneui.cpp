@@ -208,9 +208,9 @@ for(int x = 0; x<10; x++){
 
 
  // initialise ros subsriber and publisher
- image_sub_ = nh_.subscribe<sensor_msgs::Image>("/espdrone/image_rect_color", 10, &DroneGui::QRCallback, this);
- pose_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("/espdrone/pose", 10, &DroneGui::PoseCallback, this);
- drone_hover_ = nh_.advertise<espdrone_msgs::Hover>("/espdrone/cmd_hover", 1000);
+ image_sub_ = nh_.subscribe<sensor_msgs::Image>("/espdrone/image_rect_color", 1, &DroneGui::QRCallback, this);
+ pose_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("/espdrone/pose", 1, &DroneGui::PoseCallback, this);
+ drone_hover_ = nh_.advertise<espdrone_msgs::Hover>("/espdrone/cmd_hover", 1);
  waypointclient_ = nh_.serviceClient<espdrone_msgs::GoTo>("/espdrone/go_to");
  estopclient_ = nh_.serviceClient<espdrone_msgs::Stop>("/espdrone/stop");
  takeoffclient_ = nh_.serviceClient<espdrone_msgs::Takeoff>("/espdrone/takeoff");
