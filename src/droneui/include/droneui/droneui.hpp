@@ -91,6 +91,7 @@ class DroneGui {
  int currentwaypoint_;
  std::vector<std::string> stockfound_;
  bool servicecallsuccess_;
+ double waitduration_;
 //  std::map<std::string, std::string>stocklist_;
 
  //ros variables

@@ -66,6 +66,7 @@ DroneGui::DroneGui(uint32_t width, uint32_t height, std::string title) {
   currentwaypoint_ = 0;
   stockfound_.clear();
   last_data_ = "Not found any stock yet";
+  waitduration_ = 2;
 
   //initialise cmd values
   hovercmd_.vx = 0;
@@ -175,6 +176,7 @@ for(int x = 0; x<8; x++){
       ROS_INFO("moving to point %d\n",currentwaypoint_);
       std::this_thread::sleep_for(std::chrono::duration<double>(waypointcmd_.request.duration.toSec()));
       servicecallsuccess_ = true;
+      std::this_thread::sleep_for(std::chrono::duration<double>(waitduration_));
     }
     else {
       servicecallsuccess_ = false;
