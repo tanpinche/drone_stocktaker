@@ -10,9 +10,11 @@ implot -> branch e64df657b2
 
 
 depencies:
+
 opencv version 4.2.0 - build and install from souce. Make sure to included quirc library (it is usually included by default)
 
 glfw3
+
 sudo apt-get install libglfw3-dev
 
 
