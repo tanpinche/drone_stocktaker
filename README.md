@@ -1,8 +1,11 @@
 # drone_stocktaker
 
 Repository has 2 submodules, use recursive when cloning.
+
 submodule branches:
+
 imgui -> branch 58075c4414
+
 implot -> branch e64df657b2
 
 
