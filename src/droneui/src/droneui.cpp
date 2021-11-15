@@ -233,7 +233,7 @@ void DroneGui::Draw() {
 
     // Begining of ImGui drawing
 
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2, 0.2, 0.35, 1));
+    
     // set size of imgui window to match glfwWindow
     glfwGetWindowSize(window_, &window_width_, &window_height_);
     ImGui::SetWindowSize(ImVec2(window_width_, window_height_));
